@@ -21,6 +21,19 @@ default_included_features = [
     "zcr_0"
 ]
 
+important_words = [
+    "Staubsauger",
+    "Radio",
+    "Alarm",
+    "Ofen",
+    "Lüftung",
+    "Licht",
+    "Heizung",
+    "Fernseher",
+    "an",
+    "aus"
+]
+
 mel_features = [f"melspect_{i}" for i in range(64)]
 
 class MLPC_Dataset(Dataset):
@@ -53,6 +66,8 @@ class MLPC_Dataset(Dataset):
         dataset_with_index = pd.DataFrame(filtered_dataset.reshape((filtered_dataset.shape[0], -1)), index=development_metadata["id"], columns=index)
         
         dataset = pd.concat([development_metadata, dataset_with_index], axis=1)
+
+        dataset.loc[~dataset["word"].isin(important_words), "word"] = "other"
 
         # Replace categorical attributes with numerical Labels
         dataset["word"] = dataset["word"].astype("category")
@@ -93,8 +108,3 @@ class MLPC_Dataset(Dataset):
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=seed)
 
         return X_train, X_test, y_train, y_test
-
-
-#dataset = MLPC_Dataset(mel_features)
-
-#print(dataset.dataset)
