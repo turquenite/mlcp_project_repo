@@ -85,3 +85,47 @@ class DeepModel(torch.nn.Module):
         x = self.layers(x)
 
         return torch.squeeze(x)
+
+class ConvModelShallow(torch.nn.Module):
+    def __init__(self):
+        super(ConvModelShallow, self).__init__()
+
+        self.activation_function = torch.nn.ReLU()
+        self.last_layer_acivation_function = torch.nn.Sigmoid()
+
+        self.conv1 = torch.nn.Conv1d(64, 48, 3)
+        self.conv2 = torch.nn.Conv1d(48, 32, 3)
+        self.conv3 = torch.nn.Conv1d(32, 16, 3)
+        self.conv4 = torch.nn.Conv1d(16, 8, 3)
+
+        self.linear_1 = torch.nn.Linear(288, 128)
+        self.linear_2 = torch.nn.Linear(128, 64)
+        self.linear_3 = torch.nn.Linear(64, 32)
+        self.linear_4 = torch.nn.Linear(32, 1)
+
+    def forward(self, x: torch.Tensor):
+        x = x.reshape((-1, 64, 44))
+
+        x = self.conv1(x)
+        x = self.activation_function(x)
+        x = self.conv2(x)
+        x = self.activation_function(x)
+        x = self.conv3(x)
+        x = self.activation_function(x)
+        x = self.conv4(x)
+        x = self.activation_function(x)
+
+        x = torch.flatten(x, 1)
+
+        x = self.linear_1(x)
+        x = self.activation_function(x)
+        x = self.linear_2(x)
+        x = self.activation_function(x)
+        x = self.linear_3(x)
+        x = self.activation_function(x)
+        x = self.linear_4(x)
+        
+        x = self.last_layer_acivation_function(x)
+
+        return torch.squeeze(x)
+        

@@ -4,19 +4,53 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 
+default_included_features = [
+    "bandwidth_0",
+    "centroid_0",
+    "centroid_1",
+    "centroid_2",
+    "centroid_3",
+    "centroid_4",
+    "centroid_5",
+    "centroid_6",
+    "energy_0",
+    "flatness_0",
+    "flux_0",
+    "power_0",
+    "yin_0",
+    "zcr_0"
+]
+
+mel_features = [f"melspect_{i}" for i in range(64)]
+
 class MLPC_Dataset(Dataset):
-    def __init__(self):
+    def __init__(self, included_features=None):
         numpy_dataset = np.load("data/development.npy")
 
         development_metadata = pd.read_csv("data/development.csv")
         idx_from_feature_name = pd.read_csv("data/idx_to_feature_name.csv")
-        self.feature_names = list(idx_from_feature_name["feature_name"])
+
+        if included_features==None:
+            included_features = default_included_features
+        elif included_features=="all":
+            #just use all features
+            included_features = list(idx_from_feature_name["feature_name"])
+        elif included_features=="mel":
+            #just use all features
+            included_features = mel_features
+
+        included_feature_idx = idx_from_feature_name[idx_from_feature_name["feature_name"].isin(included_features)]
+        included_idx = included_feature_idx["index"]
+
+        self.feature_names = list(included_feature_idx["feature_name"])
+
+        filtered_dataset = numpy_dataset[:, included_idx]
 
         frame_iter = [f"Frame {i}" for i in range(1, 45)]
 
-        index = pd.MultiIndex.from_product([idx_from_feature_name["feature_name"], frame_iter])
+        index = pd.MultiIndex.from_product([included_feature_idx["feature_name"], frame_iter])
 
-        dataset_with_index = pd.DataFrame(numpy_dataset.reshape((numpy_dataset.shape[0], -1)), index=development_metadata["id"], columns=index)
+        dataset_with_index = pd.DataFrame(filtered_dataset.reshape((filtered_dataset.shape[0], -1)), index=development_metadata["id"], columns=index)
         
         dataset = pd.concat([development_metadata, dataset_with_index], axis=1)
 
@@ -59,3 +93,8 @@ class MLPC_Dataset(Dataset):
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=test_size, random_state=seed)
 
         return X_train, X_test, y_train, y_test
+
+
+#dataset = MLPC_Dataset(mel_features)
+
+#print(dataset.dataset)
