@@ -89,7 +89,9 @@ class MLPC_Dataset(Dataset):
         frame_iter = [f"Frame {i}" for i in range(1, 45)]
 
         for sample in batch:
-            labels.append(torch.tensor(sample["word_num_label"], dtype=torch.float32))
+            label = np.zeros(11)
+            label[sample["word_num_label"]] = 1
+            labels.append(torch.tensor(label, dtype=torch.float32))
             train_params.append(torch.tensor([[sample[(att, i)] for i in frame_iter] for att in self.feature_names], dtype=torch.float32).flatten())
             insight_params.append(sample)
 

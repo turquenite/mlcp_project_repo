@@ -129,3 +129,34 @@ class ConvModelShallow(torch.nn.Module):
 
         return torch.squeeze(x)
         
+class AudioClassifier(torch.nn.Module):
+    def __init__(self):
+        super(AudioClassifier, self).__init__()
+        
+        self.conv1 = torch.nn.Conv1d(in_channels=1, out_channels=16, kernel_size=3, stride=1, padding=1)
+        self.bn1 = torch.nn.BatchNorm1d(16)
+        self.conv2 = torch.nn.Conv1d(in_channels=16, out_channels=32, kernel_size=3, stride=1, padding=1)
+        self.bn2 = torch.nn.BatchNorm1d(32)
+        self.conv3 = torch.nn.Conv1d(in_channels=32, out_channels=64, kernel_size=3, stride=1, padding=1)
+        self.bn3 = torch.nn.BatchNorm1d(64)
+        
+        self.pool = torch.nn.MaxPool1d(kernel_size=2, stride=2)
+        
+        self.fc1 = torch.nn.Linear(22528, 128)
+        self.fc2 = torch.nn.Linear(128, 64)
+        self.fc3 = torch.nn.Linear(64, 11)
+        
+    def forward(self, x):
+        x = x.unsqueeze(1)  # Add channel dimension: (batch_size, 1, 7700)
+        
+        x = self.pool(torch.nn.functional.leaky_relu(self.bn1(self.conv1(x))))  # (batch_size, 16, 3850)
+        x = self.pool(torch.nn.functional.leaky_relu(self.bn2(self.conv2(x))))  # (batch_size, 32, 1925)
+        x = self.pool(torch.nn.functional.leaky_relu(self.bn3(self.conv3(x))))  # (batch_size, 64, 962)
+        
+        x = x.view(x.size(0), -1)  # Flatten for fully connected layer: (batch_size, 64*962)
+        
+        x = torch.nn.functional.leaky_relu(self.fc1(x))
+        x = torch.nn.functional.leaky_relu(self.fc2(x))
+        x = self.fc3(x)
+        
+        return torch.nn.functional.softmax(x, dim=1)

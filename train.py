@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from torch.utils.data import DataLoader
 from early_stopping import EarlyStopping
 
-def train(network: torch.nn.Module, test_loader: DataLoader, train_loader: DataLoader, num_epochs: int = 10, lr:float = 0.1, optimizer_type = torch.optim.Adam, loss_function = torch.nn.BCELoss(), plot_loss: bool = False, save_model: bool = False, plot_accuracy: bool = False):
+def train(network: torch.nn.Module, test_loader: DataLoader, train_loader: DataLoader, num_epochs: int = 10, lr:float = 0.1, optimizer_type = torch.optim.Adam, loss_function = torch.nn.CrossEntropyLoss(), plot_loss: bool = False, save_model: bool = False, plot_accuracy: bool = False):
     optimizer = optimizer_type(network.parameters(), lr)
     scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=num_epochs // 10, gamma=0.1)
     early_stopping = EarlyStopping(patience=5)
@@ -51,12 +51,14 @@ def train(network: torch.nn.Module, test_loader: DataLoader, train_loader: DataL
             optimizer.zero_grad()
 
             minibatch_training_loss.append(loss.item())
-            minibatch_train_accuraccies.append(np.sum(np.round(output.cpu().detach().numpy()) == targets.cpu().detach().numpy()) / len(targets))
+            minibatch_train_accuraccies.append(np.mean(np.argmax(output.cpu().detach().numpy(), axis=1) == np.argmax(targets.cpu().detach().numpy(), axis=1)))
 
         # Update the learning rate at the end of each epoch
         scheduler.step()
         epoch_train_acc.append(np.mean(minibatch_train_accuraccies))
         epoch_train_losses.append(np.mean(minibatch_training_loss))
+
+        print(f"Train metrics:\nLoss: {epoch_train_losses[-1]}\nAccuracy: {epoch_train_acc[-1]}\n")
 
         network.eval()
 
@@ -66,17 +68,20 @@ def train(network: torch.nn.Module, test_loader: DataLoader, train_loader: DataL
             network_input = network_input.to(device)
             targets = targets.to(device)
             output = network(network_input)
-            minibatch_test_accuraccies.append(np.sum(np.round(output.cpu().detach().numpy()) == targets.cpu().detach().numpy()) / len(targets))
+            minibatch_test_accuraccies.append(np.mean(np.argmax(output.cpu().detach().numpy(), axis=1) == np.argmax(targets.cpu().detach().numpy(), axis=1)))
             loss = loss_function(output, targets)
             minibatch_test_loss.append(loss.item())
 
         epoch_test_losses.append(np.mean(minibatch_test_loss))
         epoch_test_acc.append(np.mean(minibatch_test_accuraccies))
 
+        print(f"Test metrics:\nLoss: {epoch_test_losses[-1]}\nAccuracy: {epoch_test_acc[-1]}\n")
+
+
         # Early Stopping
         early_stopping(np.mean(epoch_test_losses))
 
-        if early_stopping.early_stop:
+        if early_stopping.early_stop:    
             break
 
     if plot_loss:
